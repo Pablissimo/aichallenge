@@ -1,18 +1,24 @@
 [submodule "trueskill"]
 	path = manager/trueskill
 	url = https://github.com/aichallenge/trueskill
+	ignore = all
 [submodule "ants/dist/starter_bots/c"]
 	path = ants/dist/starter_bots/c
 	url = https://github.com/flagcapper/GoogleAI-Ants-Starter-Pack.git
+	ignore = all
 [submodule "ants/dist/starter_bots/haskell"]
 	path = ants/dist/starter_bots/haskell
 	url = git://github.com/tensai-cirno/ants-haskell.git
+	ignore = all
 [submodule "manager/PHPSkills"]
 	path = manager/PHPSkills
 	url = https://github.com/moserware/PHPSkills
+	ignore = all
 [submodule "ants/visualizer/rhino"]
 	path = ants/visualizer/rhino
 	url = https://github.com/mozilla/rhino
+	ignore = all
 [submodule "ants/visualizer/UglifyJS"]
 	path = ants/visualizer/UglifyJS
 	url = https://github.com/mishoo/UglifyJS
+	ignore = all
