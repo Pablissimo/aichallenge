@@ -5,7 +5,6 @@ require_once('mysql_login.php');
 
 // By default, send account confirmation emails.
 $send_email = 1;
-$debug = 0;
 
 if (strcmp($server_info["mailer_address"], "donotsend") == 0) {
     $send_email = 0;
@@ -37,16 +36,11 @@ Cheers, the aichallenge.org staff.";
             }
             header("Location: forgot_instructions.php");
         } else {
-            if ($debug == 1) {
-                require_once('header.php');
-                echo "<h3>" . h($mail_subject) . "</h3>";
-                echo "<pre>" . h($mail_content) . "</pre>";
-                $mail_accepted = true;
-                require_once('footer.php');
-            } else {
-                $_SESSION['forgot_error'] = false;
-                header("Location: forgot.php");
-            }
+            require_once('header.php');
+            echo "<p>Password reset emails are not being sent!</p>";
+            echo "<p>This should only be used when setting up a test server.</p>";
+            echo '<p><a href="change_password.php?user_id=' . h($user_id) . '&code=' . h($forgot_code) . '">Click Here</a> to reset your password.</p>';
+            require_once('footer.php');
         }
         $_SESSION['forgot_error'] = false;
     } else {
