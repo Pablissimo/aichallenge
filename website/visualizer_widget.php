@@ -120,7 +120,7 @@ function visualize_pre() {
         <script>
 <?php
         echo "java_codebase = '$java';";
-        if (isset ($_GET['debug']) && $_GET['debug'] == "true") {
+        if (isset ($_GET['debug']) && $_GET['debug'] === "true") {
             echo "java_debug = 'true';";
         }
 ?>
@@ -154,10 +154,10 @@ function visualizer_widget($replay, $interactive=true, $width=690, $height=700) 
     if (isset ($java)) {
         ?>
             <applet <?php echo $java; ?> code="com.aicontest.visualizer.VisualizerApplet" width="<?php echo $width; ?>" height="<?php echo $height; ?>">
-            <param name="replay" value="<?php echo $replay; ?>">
-            <param name="interactive" value="<?php echo $interactive; ?>">
+            <param name="replay" value="<?php echo h($replay); ?>">
+            <param name="interactive" value="<?php echo $interactive ? 'true' : 'false'; ?>">
         <?php
-        if (isset($_GET["DEBUG"]) && $_GET["debug"] == "true") {
+        if (isset($_GET["debug"]) && $_GET["debug"] === "true") {
             ?>
                 <param name="debug" value="true">
                 <param name="separate_jvm" value="true">
@@ -193,7 +193,7 @@ function visualizer_widget($replay, $interactive=true, $width=690, $height=700) 
                     config.zoom = 1;
                 }
                 visualizer = new Visualizer(document.getElementById('visualizerDiv'), options, <?php echo $width; ?>, <?php echo $height; ?>, config);
-                visualizer.loadReplayDataFromURI('<?php echo $replay; ?>');
+                visualizer.loadReplayDataFromURI('<?php echo h($replay); ?>');
             </script>
         <?php
     }

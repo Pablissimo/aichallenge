@@ -12,7 +12,7 @@ include 'header.php'
 if (isset($_SESSION['forgot_error']) && $_SESSION['forgot_error']) {
 ?>
   <tr>
-    <th colspan="4" class="error">The user name supplied was not found in our records.</th>
+    <th colspan="4" class="error">If this account exists, a password reset email has been sent.</th>
   </tr>
 <?php
 }

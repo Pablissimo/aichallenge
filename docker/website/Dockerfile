@@ -8,7 +8,7 @@ RUN docker-php-ext-install mysqli
 RUN pecl install memcache-4.0.5.2 && docker-php-ext-enable memcache
 
 # PHP configuration
-RUN echo "output_buffering = On\ndisplay_errors = Off\nlog_errors = On\nerror_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT" > /usr/local/etc/php/conf.d/aichallenge.ini
+RUN echo "output_buffering = On\ndisplay_errors = Off\nlog_errors = On\nerror_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT\nsession.cookie_httponly = 1\nsession.cookie_secure = 1\nsession.cookie_samesite = Lax\nsession.use_strict_mode = 1" > /usr/local/etc/php/conf.d/aichallenge.ini
 
 # Enable Apache modules
 RUN a2enmod rewrite

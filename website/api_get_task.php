@@ -91,5 +91,9 @@ if ($match_row) {
 }
 
 // nothing to do
-echo json_encode(array( "task" => mysqli_error($mysqli), "timestamp" => date(DATE_ATOM) ));
+$db_error = mysqli_error($mysqli);
+if ($db_error) {
+    error_log("api_get_task error: " . $db_error);
+}
+echo json_encode(array( "task" => "", "timestamp" => date(DATE_ATOM) ));
 ?>

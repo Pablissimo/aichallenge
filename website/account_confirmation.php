@@ -6,14 +6,11 @@ $title = "Account Confirmed";
 require_once('header.php');
 
 function get_userid_from_confirmation_code($confirmation_code) {
-    global $mysqli;
-    $confirmation_code = mysqli_real_escape_string( $mysqli, stripslashes( $confirmation_code ) );
-    $query = "
-        SELECT user_id
-        FROM user
-        WHERE activation_code = '$confirmation_code'";
-    $result = mysqli_query($mysqli, $query);
-    if (mysqli_num_rows($result) > 0 ) {
+    $result = prepared_query(
+        "SELECT user_id FROM user WHERE activation_code = ?",
+        "s", $confirmation_code
+    );
+    if ($result && mysqli_num_rows($result) > 0 ) {
         $row = mysqli_fetch_row($result);
         return $row[0];
     } else {
@@ -23,8 +20,8 @@ function get_userid_from_confirmation_code($confirmation_code) {
 
 $errors = array();
 
-$confirmation_code = $_GET['confirmation_code'];
-if ($confirmation_code == NULL || strlen($confirmation_code) <= 0) {
+$confirmation_code = isset($_GET['confirmation_code']) ? $_GET['confirmation_code'] : '';
+if ($confirmation_code === NULL || strlen($confirmation_code) <= 0) {
     $errors[] = "Failed to activate the account. (101)";
 } else {
     $user_id = get_userid_from_confirmation_code($confirmation_code);
@@ -33,7 +30,7 @@ if ($confirmation_code == NULL || strlen($confirmation_code) <= 0) {
     } else {
         $result = activate_user($user_id);
         if (!$result) {
-            echo mysqli_error($mysqli);
+            error_log("Account activation failed: " . mysqli_error($mysqli));
           $errors[] = "Failed to activate the account. (103)";
         }
     }
@@ -48,7 +45,7 @@ if (count($errors) > 0) {
 
 <?php
 foreach ($errors as $key => $error) {
-    print "<li>$error</li>";
+    print "<li>" . h($error) . "</li>";
 }
 ?>
 

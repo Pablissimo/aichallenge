@@ -129,15 +129,15 @@ EOT;
   $query = "SELECT * FROM country ORDER BY country_id";
   $result = mysqli_query($mysqli, $query);
   while ($row = mysqli_fetch_assoc($result)) {
-    $option_id = $row['country_id'];
-    $option_name = $row['name'];
+    $option_id = (int)$row['country_id'];
+    $option_name = h($row['name']);
     if ($option_id == $country_id) {
-      echo "<option selected value=$option_id>$option_name</option>";
+      echo "<option selected value=\"$option_id\">$option_name</option>";
     } else {
-      echo "<option value=$option_id>$option_name</option>";
+      echo "<option value=\"$option_id\">$option_name</option>";
     }
     if ($option_id == 11) {
-        echo "<option value=999>---</option>";
+        echo "<option value=\"999\">---</option>";
     }
   }
 echo <<<EOT
@@ -163,12 +163,12 @@ EOT;
   $query = "SELECT * FROM organization WHERE org_id > 1 ORDER BY name";
   $result = mysqli_query($mysqli, $query);
   while ($row = mysqli_fetch_assoc($result)) {
-    $option_id = $row['org_id'];
-    $option_name = $row['name'];
+    $option_id = (int)$row['org_id'];
+    $option_name = h($row['name']);
     if ($option_id == $org_id) {
-      echo "<option selected value=$option_id>$option_name</option>";
+      echo "<option selected value=\"$option_id\">$option_name</option>";
     } else {
-      echo "<option value=$option_id>$option_name</option>";
+      echo "<option value=\"$option_id\">$option_name</option>";
     }
   }
 echo <<<EOT

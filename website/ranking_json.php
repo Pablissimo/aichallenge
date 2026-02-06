@@ -1,7 +1,8 @@
 <?php
 
 require_once('ranking.php');
-header("Content-type: application/json");
+header("Content-Type: application/json; charset=utf-8");
+header("X-Content-Type-Options: nosniff");
 
 $org_id = get_type_or_else("org_id", FILTER_VALIDATE_INT);
 $country_id = get_type_or_else("country_id", FILTER_VALIDATE_INT);

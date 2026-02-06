@@ -23,10 +23,10 @@ function getRealIpAddr()
 }
 
 // Log this login attempt
-$username = mysqli_real_escape_string($mysqli,stripslashes($_POST['username']));
-$password = mysqli_real_escape_string($mysqli,stripslashes($_POST['password']));
-$naive_ip = mysqli_real_escape_string($mysqli,$_SERVER['REMOTE_ADDR']);
-$real_ip = mysqli_real_escape_string($mysqli,getRealIpAddr());
+$username = $_POST['username'];
+$password = $_POST['password'];
+$naive_ip = $_SERVER['REMOTE_ADDR'];
+$real_ip = getRealIpAddr();
 
 $result = contest_query("log_login", $username, $naive_ip, $real_ip);
 if (!$result) {

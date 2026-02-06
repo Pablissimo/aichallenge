@@ -104,10 +104,6 @@ if ($q) {
 
 <h1>Server Statistics</h1>
 
-<h2>GIT information</h2>
-<p><strong>Source: </strong><code><?=exec("git remote --v|grep origin|grep fetch")?></code></p>
-<p><strong>Branch/Version Information: </strong><code><?=substr(exec("git branch -vv|grep -e ^\\*"),2);?></code></p>
-
 <h2>General</h2>
 <table class="bigstats">
   <tr>

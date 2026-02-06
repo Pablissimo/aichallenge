@@ -2,6 +2,7 @@
 
 require_once('server_info.php');
 require_once('sql.php');
+require_once('security_helpers.php');
 
 // Get the database login information from the server_info.txt file.
 
@@ -66,18 +67,13 @@ function contest_query() {
 }
 
 function check_credentials($username, $password) {
-    global $mysqli;
-    $username = mysqli_real_escape_string($mysqli, $username);
-    $query = "
-        SELECT *
-        FROM user u
-        WHERE
-            username='$username' AND
-            activated = 1
-    ";
-    $result = mysqli_query($mysqli, $query);
-    if( $user = mysqli_fetch_assoc( $result ) ) {
-        if (crypt($password, $user['password']) == $user['password']) {
+    $result = prepared_query(
+        "SELECT * FROM user u WHERE username = ? AND activated = 1",
+        "s", $username
+    );
+    if ($user = mysqli_fetch_assoc($result)) {
+        if (hash_equals(crypt($password, $user['password']), $user['password'])) {
+            session_regenerate_id(true);
             $_SESSION['username']   = $user['username'];
             $_SESSION['admin']      = $user['admin'];
             $_SESSION['user_id']    = $user['user_id'];
@@ -91,14 +87,15 @@ function check_credentials($username, $password) {
 }
 
 function check_credentials_forgot($user_id, $forgot_code) {
-    // $login_cookie is not encrypted nor stored in the database
-    // $user_cookie['cookie'] is encrypted
+    // $forgot_code is not encrypted nor stored in the database
+    // $user['cookie'] is encrypted
     $user_forgets = contest_query("select_user_forgot_code", $user_id);
     while ($user = mysqli_fetch_assoc($user_forgets)) {
-        if (crypt($forgot_code, $user['cookie']) == $user['cookie']) {
-            // found valid cookie, reset expire date
+        if (hash_equals(crypt($forgot_code, $user['cookie']), $user['cookie'])) {
+            // found valid cookie, delete it (single use)
             contest_query("delete_user_cookie", $user_id, $user['cookie']);
             // update session vars
+            session_regenerate_id(true);
             $_SESSION['username']   = $user['username'];
             $_SESSION['admin']      = $user['admin'];
             $_SESSION['user_id']    = $user['user_id'];
@@ -116,14 +113,21 @@ function check_credentials_forgot($user_id, $forgot_code) {
  */
 function check_credentials_cookie($user_id, $login_cookie) {
     // $login_cookie is not encrypted nor stored in the database
-    // $user_cookie['cookie'] is encrypted
+    // $user['cookie'] is encrypted
     $user_cookies = contest_query("select_user_cookies", $user_id);
     while ($user = mysqli_fetch_assoc($user_cookies)) {
-        if (crypt($login_cookie, $user['cookie']) == $user['cookie']) {
+        if (hash_equals(crypt($login_cookie, $user['cookie']), $user['cookie'])) {
             // found valid cookie, reset expire date
             contest_query("update_user_cookie", $user_id, $user['cookie']);
-            setcookie('uid', $login_cookie, time()+60*60*24*5);
+            setcookie('uid', $login_cookie, [
+                'expires'  => time() + 60*60*24*5,
+                'path'     => '/',
+                'secure'   => true,
+                'httponly'  => true,
+                'samesite'  => 'Lax',
+            ]);
             // update session vars
+            session_regenerate_id(true);
             $_SESSION['username']   = $user['username'];
             $_SESSION['admin']      = $user['admin'];
             $_SESSION['user_id']    = $user['user_id'];
@@ -143,10 +147,16 @@ function create_user_cookie($user_id) {
     if (isset($_SESSION['user_id'])) {
         $user_id = $_SESSION['user_id'];
         $login_cookie = $user_id . "-" . salt(32, true);
-        $encrytped_cookie = crypt($login_cookie, '$6$rounds=54321$' . salt() . '$');
-        if (contest_query("insert_user_cookie", $user_id, $encrytped_cookie)) {
-            setcookie('uid', $login_cookie, time()+60*60*24*5, '', '', false, true);
-            $_SESSION['cookie'] = $encrytped_cookie;
+        $encrypted_cookie = crypt($login_cookie, '$6$rounds=54321$' . salt() . '$');
+        if (contest_query("insert_user_cookie", $user_id, $encrypted_cookie)) {
+            setcookie('uid', $login_cookie, [
+                'expires'  => time() + 60*60*24*5,
+                'path'     => '/',
+                'secure'   => true,
+                'httponly'  => true,
+                'samesite'  => 'Lax',
+            ]);
+            $_SESSION['cookie'] = $encrypted_cookie;
             return $login_cookie;
         } else {
             return NULL;

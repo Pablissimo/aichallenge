@@ -82,29 +82,29 @@ function create_ranking_json($page=0, $org_id=NULL, $country_id=NULL, $language_
     $rank_id_name = NULL;
     if ($org_id !== NULL) {
         $filtered = True;
-        $where .= " and u.org_id = ".$org_id;
+        $where .= " and u.org_id = ".(int)$org_id;
         $rank_type = "org";
-        $rank_id = $org_id;
+        $rank_id = (int)$org_id;
         $rank_id_field = "org_name";
     }
     if ($country_id !== NULL) {
         $filtered = True;
-        $where .= " and u.country_id = ".$country_id;
+        $where .= " and u.country_id = ".(int)$country_id;
         $rank_type = "country";
-        $rank_id = $country_id;
+        $rank_id = (int)$country_id;
         $rank_id_field = "country";
     }
     if ($language_id !== NULL) {
         $filtered = True;
-        $where .= " and s.language_id = ".$language_id;
+        $where .= " and s.language_id = ".(int)$language_id;
         $rank_type = "language";
-        $rank_id = $language_id;
+        $rank_id = (int)$language_id;
         $rank_id_field = "programming_language";
     }
     if ($page === 0) {
         $limit = "";
     } else {
-        $limit = "limit ".$page_size." offset ".($page_size * ($page-1));
+        $limit = "limit ".(int)$page_size." offset ".((int)$page_size * ((int)$page-1));
     }
     // get count of rows and pages
     $results = contest_query("select_rankings_page_count", $where);
@@ -175,25 +175,25 @@ function create_ranking_table($page=0, $org_id=NULL, $country_id=NULL, $language
     $page_string = "";
     if ($org_id !== NULL) {
         $filtered = True;
-        $where .= " and u.org_id = ".$org_id;
-        $page_string .= '&org='.$org_id;
+        $where .= " and u.org_id = ".(int)$org_id;
+        $page_string .= '&org='.(int)$org_id;
     }
     if ($country_id !== NULL) {
         $filtered = True;
-        $where .= " and u.country_id = ".$country_id;
-        $page_string .= '&country='.$country_id;
+        $where .= " and u.country_id = ".(int)$country_id;
+        $page_string .= '&country='.(int)$country_id;
     }
     if ($language_id !== NULL) {
         $filtered = True;
-        $where .= " and s.language_id = ".$language_id;
-        $page_string .= '&language='.$language_id;
+        $where .= " and s.language_id = ".(int)$language_id;
+        $page_string .= '&language='.(int)$language_id;
     }
     $page_string .= "&page=";
     $page_string[0] = "?";
     if ($page === 0) {
         $limit = "";
     } else {
-        $limit = "limit ".$page_size." offset ".($page_size * ($page-1));
+        $limit = "limit ".(int)$page_size." offset ".((int)$page_size * ((int)$page-1));
     }
     // get count of rows and pages
     $results = contest_query("select_rankings_page_count", $where);

@@ -3,8 +3,7 @@
 require_once("mysql_login.php");
 require_once("lookup.php");
 
-global $mysqli;
-$username = mysqli_real_escape_string($mysqli, stripslashes($_GET['username']));
+$username = $_GET['username'];
 if (!isset($username) || !$username) {
     $users = NULL;
 } else {
@@ -21,7 +20,7 @@ require_once("nice.php");
 if ($users === NULL) {
     echo "<p>No search string given.</p>";
 } else {
-    echo "<h2>Users with '$username'</h2>";
+    echo "<h2>Users with '" . h($username) . "'</h2>";
     if (count($users) > 0) {
         echo "<ul>";
         foreach ($users as $user) {

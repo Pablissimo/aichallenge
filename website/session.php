@@ -1,5 +1,12 @@
 <?php
 
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path'     => '/',
+    'secure'   => true,
+    'httponly'  => true,
+    'samesite'  => 'Lax',
+]);
 session_start();
 
 function validate_user_cookie() {
@@ -39,9 +46,11 @@ function current_user_id() {
 }
 
 function activate_user($user_id) {
-  global $mysqli;
-  $query = "UPDATE user SET activated = 1 WHERE user_id = '$user_id'";
-  return mysqli_query($mysqli, $query);
+  require_once('security_helpers.php');
+  return prepared_query(
+      "UPDATE user SET activated = 1 WHERE user_id = ?",
+      "i", (int)$user_id
+  );
 }
 
 $errors = array();

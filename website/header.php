@@ -1,8 +1,17 @@
+<?php
+require_once('server_info.php');
+require_once('security_helpers.php');
+$page_render_start_time = microtime(true);
+
+// Security headers
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' ajax.googleapis.com; style-src fonts.googleapis.com 'self' 'unsafe-inline'; img-src 'self' data:; font-src fonts.gstatic.com 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'self'");
+?>
 <!DOCTYPE html>
 <?php
-
-require_once('server_info.php');
-$page_render_start_time = microtime(true);
 
 //Title mechanism, $title is declared on every page. CMS next year please.
 if(isset($title)) {
@@ -14,7 +23,7 @@ if(isset($title)) {
 ?>
 <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
-        <title><?php echo $title; ?></title>
+        <title><?php echo h($title); ?></title>
         <meta name="description" content="The AI Challenge (sponsored by Google) is an international programming contest started by the University of Waterloo Computer Science Club." />
         <meta name="keywords" content="" />
 

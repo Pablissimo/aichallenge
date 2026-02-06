@@ -20,9 +20,11 @@ if(!isset($_GET["page"])
 }
 
 if ($user_id) {
-    $query = "select u.username from user u where u.user_id = $user_id limit 1";
-    global $mysqli;
-    $username = mysqli_fetch_object(mysqli_query($mysqli, $query))->username;
+    $result = prepared_query(
+        "select u.username from user u where u.user_id = ? limit 1",
+        "i", (int)$user_id
+    );
+    $username = mysqli_fetch_object($result)->username;
     
     $username = htmlentities($username, ENT_COMPAT, "UTF-8");
     

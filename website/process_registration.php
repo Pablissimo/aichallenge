@@ -12,31 +12,34 @@ require_once 'web_util.php';
 require_once('memcache.php');
 
 function check_valid_user_status_code($code) {
-  global $mysqli;
-  $query = "SELECT * FROM user_status_code WHERE status_id = ".(int)$code;
-  $result = mysqli_query($mysqli, $query);
+  $result = prepared_query(
+      "SELECT * FROM user_status_code WHERE status_id = ?",
+      "i", (int)$code
+  );
   return (boolean)mysqli_num_rows($result);
 }
 
 function check_valid_organization($code) {
-  global $mysqli;
   if ($code == 999) {
     return False;
   }
-  $query = "SELECT * FROM organization WHERE org_id=".(int)$code;
-  $result = mysqli_query($mysqli, $query);
+  $result = prepared_query(
+      "SELECT * FROM organization WHERE org_id = ?",
+      "i", (int)$code
+  );
   return (boolean)mysqli_num_rows($result);
 }
 
 function check_valid_country($id) {
-  global $mysqli;
   if ($id == 999 || !filter_var($id, FILTER_VALIDATE_INT)) {
     return False;
   }
-  $query = "SELECT count(*) from country where country_id=". $id;
-  $result = mysqli_query($mysqli, $query);
+  $result = prepared_query(
+      "SELECT count(*) as cnt from country where country_id = ?",
+      "i", (int)$id
+  );
   $row = mysqli_fetch_assoc($result);
-  if ($row['count(*)'] > 0) {
+  if ($row['cnt'] > 0) {
     return True;
   }
   return False;
@@ -54,14 +57,18 @@ function create_new_organization( $org_name ) {
         $memcache->delete('lookup:org_id');
         $memcache->delete('lookup:org_name');
     }
-    $query = "SELECT org_id FROM organization WHERE name='".$org_name."'";
-    $result = mysqli_query($mysqli, $query);
+    $result = prepared_query(
+        "SELECT org_id FROM organization WHERE name = ?",
+        "s", $org_name
+    );
     if ( mysqli_num_rows($result) > 0 ) {
         $row = mysqli_fetch_row($result);
         return $row[0];
     } else {
-        $query = "INSERT INTO organization (`name`) VALUES('".$org_name."')";
-        $result = mysqli_query($mysqli, $query);
+        prepared_query(
+            "INSERT INTO organization (`name`) VALUES(?)",
+            "s", $org_name
+        );
         return mysqli_insert_id($mysqli);
     }
 }
@@ -78,18 +85,14 @@ if (!isset($_POST['username'], $_POST['password1'], $_POST['password2'],
 }
 
 // Gather the information entered by the user on the signup page.
-$username = mysqli_real_escape_string($mysqli,stripslashes($_POST['username']));
-$password1 = mysqli_real_escape_string($mysqli,stripslashes($_POST['password1']));
-$password2 = mysqli_real_escape_string($mysqli,stripslashes($_POST['password2']));
-$user_email = mysqli_real_escape_string($mysqli,stripslashes($_POST['user_email']));
-$user_status = mysqli_real_escape_string($mysqli,stripslashes($_POST['user_status']));
-$user_org = mysqli_real_escape_string($mysqli,stripslashes($_POST['user_organization']));
-$bio = mysqli_real_escape_string($mysqli,stripslashes($_POST['bio']));
-$country_id = mysqli_real_escape_string($mysqli,stripslashes($_POST['user_country']));
-
-// Uncomment the following line to disable account creation
-//$errors[] = "Accounts can not be created at this time. Come back later, " .
-//      "once the contest opens.";
+$username = $_POST['username'];
+$password1 = $_POST['password1'];
+$password2 = $_POST['password2'];
+$user_email = $_POST['user_email'];
+$user_status = (int)$_POST['user_status'];
+$user_org = $_POST['user_organization'];
+$bio = $_POST['bio'];
+$country_id = (int)$_POST['user_country'];
 
 // Check for bad words
 if (contains_bad_word($username)) {
@@ -113,10 +116,9 @@ else
 }
 
 // Check if the username already exists.
-$sql="SELECT * FROM user WHERE username='$username'";
-$result = mysqli_query($mysqli, $sql);
+$result = prepared_query("SELECT * FROM user WHERE username = ?", "s", $username);
 if (mysqli_num_rows($result) > 0) {
-  $errors[] = "The username $username is already in use. Please choose a different username.";
+  $errors[] = "The username " . h($username) . " is already in use. Please choose a different username.";
 }
 
 // Check that the email address is not blank.
@@ -126,10 +128,12 @@ if (strlen($user_email) <= 0) {
 
 // Check if the email is already in use (except by an admin account or a donotsend account).
 if (strcmp($user_email, "donotsend") != 0) {
-  $sql="select email from user where email = '$user_email' and admin = 0";
-  $result = mysqli_query($mysqli, $sql);
+  $result = prepared_query(
+      "select email from user where email = ? and admin = 0",
+      "s", $user_email
+  );
   if ($result && mysqli_num_rows($result) > 0) {
-    $errors[] = "The email $user_email is already in use. You are only allowed to have one account! It is easy for us to tell if you have two accounts, and you will be disqualified if you have two accounts! If there is some problem with your existing account, get in touch with the contest organizers on irc.freenode.com channel #aichallenge and we will help you get up-and-running again!";
+    $errors[] = "The email " . h($user_email) . " is already in use. You are only allowed to have one account! It is easy for us to tell if you have two accounts, and you will be disqualified if you have two accounts! If there is some problem with your existing account, get in touch with the contest organizers on irc.freenode.com channel #aichallenge and we will help you get up-and-running again!";
   }
   $edomain = substr(strrchr($user_email, '@'), 1);
   $mx_records = array();
@@ -149,7 +153,7 @@ if (strlen($username) < 5 || strlen($username) > 16) {
 }
 
 // Check that the two passwords given match.
-if ($password1 != $password2) {
+if ($password1 !== $password2) {
   $errors[] = "You made a mistake while entering your password. "
             . "The two passwords that you give should match.";
 }
@@ -174,24 +178,26 @@ if( $user_org == '-1') {
     $_POST['user_organization_other'] = trim($_POST['user_organization_other']);
     if( $_POST['user_organization_other'] === '' ) {
         //don't create empty organizations
-        $user_org = '0';
+        $user_org = 0;
     } else {
-        $user_org_other = mysqli_real_escape_string($mysqli,stripslashes($_POST['user_organization_other']));
-        $user_org = create_new_organization( $user_org_other );
+        $user_org = create_new_organization($_POST['user_organization_other']);
     }
 } elseif (!check_valid_organization($user_org)) {
   $errors[] = "The organization you selected is invalid. Please contact the contest staff.";
 }
+$user_org = (int)$user_org;
 
 if (count($errors) <= 0) {
   // Add the user to the database, with no permissions.
   $confirmation_code = md5(salt(64));
-  $query = "
-      SELECT org.name AS name, COUNT(u.user_id) AS peers
-      FROM organization org
-      LEFT OUTER JOIN user u ON u.org_id = org.org_id
-      WHERE org.org_id = " . $user_org;
-  $result = mysqli_query($mysqli, $query);
+  $result = prepared_query(
+      "SELECT org.name AS name, COUNT(u.user_id) AS peers
+       FROM organization org
+       LEFT OUTER JOIN user u ON u.org_id = org.org_id
+       WHERE org.org_id = ?
+       GROUP BY org.name",
+      "i", $user_org
+  );
   $peer_message = "";
   $org_name = "";
   $num_peers = "";
@@ -217,10 +223,15 @@ if (count($errors) <= 0) {
       }
     }
   }
-  $query = "
-      INSERT INTO user (username,`password`,email,status_id,activation_code,org_id,bio,country_id,created,activated,admin)
-      VALUES ('$username','" . mysqli_real_escape_string($mysqli,crypt($password1, '$6$rounds=54321$' . salt() . '$')) . "','$user_email',$user_status,'$confirmation_code',$user_org,'$bio',$country_id,CURRENT_TIMESTAMP,0,0)";
-  if (mysqli_query($mysqli, $query)) {
+  $hashed_password = crypt($password1, '$6$rounds=54321$' . salt() . '$');
+  $insert_result = prepared_query(
+      "INSERT INTO user (username, `password`, email, status_id, activation_code, org_id, bio, country_id, created, activated, admin)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 0, 0)",
+      "sssissis",
+      $username, $hashed_password, $user_email, $user_status,
+      $confirmation_code, $user_org, $bio, $country_id
+  );
+  if ($insert_result) {
     if ($memcache) {
         $memcache->delete('lookup:user_id');
         $memcache->delete('lookup:username');
@@ -249,33 +260,14 @@ if (count($errors) <= 0) {
     if (intval($mail_accepted) == 0) {
       $errors[] = "Failed to send confirmation email. Try again in a few " .
         "minutes.";
-      $query = "DELETE FROM user WHERE username='$username' and " .
-        "activation_code='" . $confirmation_code . "'";
-      mysqli_query($mysqli, $query);
-    } else {
-      // Send notification mail to contest admin.
-      //$mail_subject = "New Contest User";
-      //$mail_content = "username = " . $username . "\nOrganizationID = " .
-      //  $user_org . "\nUser number " . ($num_peers + 1) . " from " .
-      //  $org_name;
-      //if ($send_email == 1) {
-      //  $mail_accepted = send_gmail($admin_address,
-      //                              $mail_subject,
-      //                              $mail_content);
-      //} else {
-      //  $mail_accepted = true;
-      //}
-      //if (intval($mail_accepted) == 0) {
-      //  $errors[] = "Failed to send confirmation email. Try again in " .
-      //    "a few minutes.";
-      //  $query = "DELETE FROM users WHERE username='$username' and " .
-      //    "password='" . md5($password1) . "'";
-      //  mysql_query($query);
-      //}
+      prepared_query(
+          "DELETE FROM user WHERE username = ? and activation_code = ?",
+          "ss", $username, $confirmation_code
+      );
     }
   } else {
     $errors[] = "Failed to communicate with the registration database. Try " .
-      "again in a few minutes. ($query : " . mysqli_error($mysqli) . ")";
+      "again in a few minutes.";
   }
 }
 if (count($errors) > 0) {
@@ -301,8 +293,8 @@ if (count($errors) > 0) {
 if ($send_email == 0) {
   echo "<p>Confirmation emails are not being sent!</p>";
   echo "<p>This should only be used when setting up a test server.</p>";
-  echo '<p><a href="account_confirmation.php?confirmation_code=' . 
-       $confirmation_code . '">Click Here</a> to activate the account.</p>';
+  echo '<p><a href="account_confirmation.php?confirmation_code=' .
+       h($confirmation_code) . '">Click Here</a> to activate the account.</p>';
 }
 
 }  // end if
