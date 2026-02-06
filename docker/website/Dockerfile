@@ -19,8 +19,12 @@ COPY docker/website/apache.conf /etc/apache2/sites-available/000-default.conf
 # Copy website source
 COPY website/ /var/www/html/
 
-# Copy visualizer for replay viewing
-COPY ants/visualizer/ /var/www/html/visualizer/
+# Generate concatenated CSS (setup.py is Python 2 and does this + markdown compilation)
+RUN cat /var/www/html/css/font.css /var/www/html/css/reset.css /var/www/html/css/layout.css /var/www/html/css/typo.css /var/www/html/css/tab_sync.css /var/www/html/css/pygments_style.css > /var/www/html/aichallenge.css
+
+# Copy visualizer for replay viewing (flatten data/img/ to img/ to match expected layout)
+COPY ants/visualizer/js/ /var/www/html/visualizer/js/
+COPY ants/visualizer/data/img/ /var/www/html/visualizer/img/
 
 # Copy PHPSkills for TrueSkill calculation (used by api_game_result.php)
 COPY manager/PHPSkills/ /var/www/html/manager/PHPSkills/
