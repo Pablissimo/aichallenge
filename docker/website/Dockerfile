@@ -22,6 +22,16 @@ COPY website/ /var/www/html/
 # Generate concatenated CSS (setup.py is Python 2 and does this + markdown compilation)
 RUN cat /var/www/html/css/font.css /var/www/html/css/reset.css /var/www/html/css/layout.css /var/www/html/css/typo.css /var/www/html/css/tab_sync.css /var/www/html/css/pygments_style.css > /var/www/html/aichallenge.css
 
+# Render wiki markdown to HTML fragments and inject as PHP includes
+COPY docker/website/inject_markdown.php /tmp/inject_markdown.php
+RUN apt-get update && apt-get install -y --no-install-recommends git cmark ca-certificates \
+    && git clone --depth 1 https://github.com/aichallenge/aichallenge.wiki.git /tmp/wiki \
+    && mkdir -p /var/www/html/wiki \
+    && php /tmp/inject_markdown.php \
+    && rm -rf /tmp/wiki /tmp/inject_markdown.php \
+    && apt-get purge -y git && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy visualizer for replay viewing (flatten data/img/ to img/ to match expected layout)
 COPY ants/visualizer/js/ /var/www/html/visualizer/js/
 COPY ants/visualizer/data/img/ /var/www/html/visualizer/img/
