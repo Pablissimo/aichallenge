@@ -176,7 +176,7 @@ class ExternalCompiler(Compiler):
         with CD(bot_dir):
             files = safeglob_multi(globs)
 
-        box = get_sandbox(bot_dir)
+        box = get_sandbox(bot_dir, mode="build")
         try:
             if self.separate:
                 for filename in files:
@@ -281,7 +281,7 @@ class TargetCompiler(Compiler):
         with CD(bot_dir):
             sources = safeglob_multi(globs)
 
-        box = get_sandbox(bot_dir)
+        box = get_sandbox(bot_dir, mode="build")
         try:
             for source in sources:
                 head, ext = os.path.splitext(source)

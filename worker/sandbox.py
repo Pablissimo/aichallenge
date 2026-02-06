@@ -519,7 +519,12 @@ class House:
         else:
             return True
 
-def get_sandbox(working_dir, secure=None):
+_USE_DOCKER = os.environ.get('USE_DOCKER_SANDBOX', 'false').lower() == 'true'
+
+def get_sandbox(working_dir, secure=None, mode="run", image=None):
+    if _USE_DOCKER:
+        from docker_sandbox import DockerSandbox
+        return DockerSandbox(working_dir, mode=mode, image=image)
     if secure is None:
         secure = _SECURE_DEFAULT
     if secure:

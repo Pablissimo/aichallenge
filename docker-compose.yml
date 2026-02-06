@@ -70,7 +70,17 @@ services:
       CONTEST_ROOT: /var/aichallenge
       SECURE_JAIL: "false"
       MEMORY_LIMIT: 1500
+      # Docker sandbox settings
+      USE_DOCKER_SANDBOX: "true"
+      BOT_BASE_IMAGE: bot-base:latest
+      BOT_RUN_MEMORY: "256m"
+      BOT_BUILD_MEMORY: "512m"
+      BOT_CPU_LIMIT: "1.0"
+      # Volume name mapping so DockerSandbox can mount the right volumes
+      # into bot containers (format: mount_point=volume_name,...)
+      DOCKER_VOLUME_MAP: "/var/aichallenge/compiled=aichallenge_compiled_data,/var/aichallenge/uploads=aichallenge_uploads_data,/var/aichallenge/maps=aichallenge_maps_data"
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
       - uploads_data:/var/aichallenge/uploads
       - maps_data:/var/aichallenge/maps
       - compiled_data:/var/aichallenge/compiled

@@ -96,6 +96,20 @@ echo "Loading maps into database..."
 cd /opt/aichallenge/manager
 python add_maps_to_database.py || echo "Warning: failed to load maps into database"
 
+# Copy submission test files to the compiled volume so Docker sandbox can access them
+if [ "${USE_DOCKER_SANDBOX}" = "true" ]; then
+    echo "Copying submission test files to shared volume..."
+    mkdir -p "${CONTEST_ROOT}/compiled/_testbot"
+    cp -r /opt/aichallenge/ants/submission_test/* "${CONTEST_ROOT}/compiled/_testbot/" 2>/dev/null || true
+fi
+
+# Clean up any stale bot/build containers from previous runs
+if [ "${USE_DOCKER_SANDBOX}" = "true" ]; then
+    echo "Cleaning up stale bot containers..."
+    docker ps -a --filter "name=^bot-" --filter "name=^build-" --format '{{.Names}}' 2>/dev/null | \
+        xargs -r docker rm -f 2>/dev/null || true
+fi
+
 # Start the worker
 echo "Starting worker..."
 cd /opt/aichallenge/worker

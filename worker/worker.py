@@ -449,9 +449,15 @@ class Worker:
             bot_dir = self.download_dirs[submission_id]
         else:
             bot_dir = self.submission_dir(submission_id)
+        # Use the TestBot path - when using Docker sandbox, use the copy
+        # on the shared volume so the sandbox container can access it
+        if os.environ.get('USE_DOCKER_SANDBOX', 'false').lower() == 'true':
+            testbot_dir = os.path.join(server_info['compiled_path'], '_testbot')
+        else:
+            testbot_dir = os.path.join(server_info['repo_path'], "ants", "submission_test")
         bots = [(os.path.join(bot_dir, 'bot'),
                  compiler.get_run_cmd(bot_dir)),
-                (os.path.join(server_info['repo_path'],"ants","submission_test"), "python TestBot.py")]
+                (testbot_dir, "python TestBot.py")]
         log.debug(bots)
         # set worker debug logging
         if self.debug:
