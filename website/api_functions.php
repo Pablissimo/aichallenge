@@ -25,6 +25,8 @@ if (!isset($_GET['api_key'])) {
 
 function valid_worker($api_key,$ip_address) {
 	global $memcache;
+	global $mysqli;
+	$skip_ip_check = getenv('SKIP_WORKER_IP_CHECK') === 'true';
 	if ($memcache) {
 		$memcache->delete('workers');
 		// pull workers array from memcache
@@ -32,26 +34,26 @@ function valid_worker($api_key,$ip_address) {
 		if (!$workers) {
 			$workers = array();
 			$sql = "select * from worker";
-			$result = mysql_query($sql);
-			while ($row = mysql_fetch_assoc($result)) {
+			$result = mysqli_query($mysqli, $sql);
+			while ($row = mysqli_fetch_assoc($result)) {
 				$workers[$row["api_key"]] = $row;
 			}
 			$memcache->set('workers', $workers);
 		}
-		if (isset($workers[$api_key]) and $workers[$api_key]["ip_address"] == $ip_address) {
+		if (isset($workers[$api_key]) and ($skip_ip_check or $workers[$api_key]["ip_address"] == $ip_address)) {
 			return $workers[$api_key];
 		} else {
 			return false;
 		}
 	} else {
 		// fallback for no memcache
-		$sql = "SELECT * FROM worker WHERE api_key = '".mysql_real_escape_string($api_key)."';";
-	    $result = mysql_query($sql);
-	    if(!$result || mysql_num_rows($result) == 0){
+		$sql = "SELECT * FROM worker WHERE api_key = '".mysqli_real_escape_string($mysqli, $api_key)."';";
+	    $result = mysqli_query($mysqli, $sql);
+	    if(!$result || mysqli_num_rows($result) == 0){
 	        return false;
 	    }
-	    $worker = mysql_fetch_assoc($result);
-	    if($ip_address!=$worker['ip_address']){
+	    $worker = mysqli_fetch_assoc($result);
+	    if(!$skip_ip_check and $ip_address!=$worker['ip_address']){
 	        return false;
 	    }
 	    return $worker;

@@ -29,9 +29,10 @@ where
     username = '$username'
 EOT;
 
-    $user_org_data = mysql_query($user_query);
+    global $mysqli;
+    $user_org_data = mysqli_query($mysqli, $user_query);
     if ($user_org_data) {
-        list ($user_org_id) = mysql_fetch_row($user_org_data);
+        list ($user_org_id) = mysqli_fetch_row($user_org_data);
     } else {
         $user_org_id = -1;
     }
@@ -56,7 +57,7 @@ where
 group by o.org_id
 order by num_leader desc
 EOT;
-    $rankings_results = mysql_query($rankings_query);
+    $rankings_results = mysqli_query($mysqli, $rankings_query);
 
     // If query fails
     if (!$rankings_results) {
@@ -75,7 +76,7 @@ $table .= <<<EOT
 </thead>
 <tbody>
 EOT;
-    for ($i = 1; $row = mysql_fetch_assoc($rankings_results); $i += 1) {
+    for ($i = 1; $row = mysqli_fetch_assoc($rankings_results); $i += 1) {
         $num_leaders = $row["num_leaders"];
         $org_name = htmlentities($row["org_name"], ENT_COMPAT, 'UTF-8');
         $org_id = $row["org_id"];

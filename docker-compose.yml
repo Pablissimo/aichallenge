@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:5.7
+    command: --sql-mode=""
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: aichallenge
+      MYSQL_USER: aichallenge
+      MYSQL_PASSWORD: aichallengepass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/0_schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
+      - ./sql/1_data.sql:/docker-entrypoint-initdb.d/01-data.sql:ro
+      - ./sql/2_generate_matchup.sql:/docker-entrypoint-initdb.d/02-generate-matchup.sql:ro
+      - ./sql/2_update_rankings.sql:/docker-entrypoint-initdb.d/03-update-rankings.sql:ro
+      - ./docker/mysql/init/04-seed.sql:/docker-entrypoint-initdb.d/04-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "aichallenge", "-paichallengepass"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  memcached:
+    image: memcached:alpine
+    ports:
+      - "11211:11211"
+
+  website:
+    build:
+      context: .
+      dockerfile: docker/website/Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      DB_HOST: mysql
+      DB_USERNAME: aichallenge
+      DB_PASSWORD: aichallengepass
+      DB_NAME: aichallenge
+      MEMCACHED_HOST: memcached
+      MEMCACHED_PORT: 11211
+      CONTEST_ROOT: /var/aichallenge
+      REPO_PATH: /var/www/html
+      SKIP_WORKER_IP_CHECK: "true"
+    volumes:
+      - uploads_data:/var/aichallenge/uploads
+      - maps_data:/var/aichallenge/maps
+      - replay_data:/var/aichallenge/replays
+      - logs_data:/var/aichallenge/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      memcached:
+        condition: service_started
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: aichallenge
+      MYSQL_PASSWORD: aichallengepass
+      MYSQL_DATABASE: aichallenge
+      API_BASE_URL: http://website/
+      API_KEY: worker_api_key_local
+      CONTEST_ROOT: /var/aichallenge
+      SECURE_JAIL: "false"
+      MEMORY_LIMIT: 1500
+    volumes:
+      - uploads_data:/var/aichallenge/uploads
+      - maps_data:/var/aichallenge/maps
+      - compiled_data:/var/aichallenge/compiled
+      - replay_data:/var/aichallenge/replays
+      - logs_data:/var/aichallenge/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      website:
+        condition: service_started
+
+volumes:
+  mysql_data:
+  uploads_data:
+  maps_data:
+  compiled_data:
+  replay_data:
+  logs_data:

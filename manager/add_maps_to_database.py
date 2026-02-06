@@ -3,7 +3,7 @@
 import os
 import sys
 
-import MySQLdb
+import pymysql
 from server_info import server_info
 from sql import sql
 
@@ -15,12 +15,12 @@ def main():
         for filepath in files:
             if filepath.endswith(".map"):
                 map_files.add(os.path.join(root, filepath)[len(maps_path)+1:])
-    
+
     # get list of maps in database
-    connection = MySQLdb.connect(host = server_info["db_host"],
+    connection = pymysql.connect(host = server_info["db_host"],
                                  user = server_info["db_username"],
-                                 passwd = server_info["db_password"],
-                                 db = server_info["db_name"])
+                                 password = server_info["db_password"],
+                                 database = server_info["db_name"])
     cursor = connection.cursor()
     cursor.execute(sql["select_map_filenames"])
     db_maps = set([row[0] for row in cursor.fetchall()])

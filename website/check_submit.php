@@ -55,8 +55,8 @@ if (!logged_in_with_valid_credentials()) {
   die();
 }
 
-$result = mysql_query("SELECT * FROM user WHERE user_id = ".current_user_id());
-$userdata = mysql_fetch_assoc($result);
+$result = mysqli_query($mysqli, "SELECT * FROM user WHERE user_id = ".current_user_id());
+$userdata = mysqli_fetch_assoc($result);
 $sid = session_id();
 $local_key = sha1($sid . $userdata['activation_code'] . $userdata['email']);
 if (!isset($_POST['submit_key']) || $local_key != $_POST['submit_key']) {
@@ -76,7 +76,7 @@ if (count($errors) == 0) {
 
 if (count($errors) == 0) {
   if (!create_new_submission_for_current_user()) {
-    $errors[] = "Problem while creating submission entry in database. ".mysql_error();
+    $errors[] = "Problem while creating submission entry in database. ".mysqli_error($mysqli);
   }
 }
 

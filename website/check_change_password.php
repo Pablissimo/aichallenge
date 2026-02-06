@@ -15,9 +15,10 @@ if (isset($_POST['old_password'])) {
 } else {
     $old_password = NULL;
 }
-$old_password = mysql_real_escape_string(stripslashes($old_password));
-$new_password = mysql_real_escape_string(stripslashes($_POST['new_password']));
-$confirm_password = mysql_real_escape_string(stripslashes($_POST['confirm_password']));
+global $mysqli;
+$old_password = mysqli_real_escape_string($mysqli, stripslashes($old_password));
+$new_password = mysqli_real_escape_string($mysqli, stripslashes($_POST['new_password']));
+$confirm_password = mysqli_real_escape_string($mysqli, stripslashes($_POST['confirm_password']));
 
 if ($new_password != $confirm_password) {
     $_SESSION['change_password_error'] = "Passwords do not match.";

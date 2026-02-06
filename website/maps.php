@@ -17,23 +17,24 @@ function get_map_data() {
         where map_id = %s and timestamp > '%s'
         group by cutoff";
 
-    $map_results = mysql_query($map_query);
+    global $mysqli;
+    $map_results = mysqli_query($mysqli, $map_query);
     if (!$map_results) {
         return NULL;
     }
     $maps = array();
     $totals = array();
     $totals["overall"] = 0;
-    while ($list_row = mysql_fetch_assoc($map_results)) {
+    while ($list_row = mysqli_fetch_assoc($map_results)) {
         $maps[] = $list_row;
     }
     foreach ($maps as &$map) {
-        $cutoff_results = mysql_query(sprintf($cutoff_query, $map["map_id"],
+        $cutoff_results = mysqli_query($mysqli, sprintf($cutoff_query, $map["map_id"],
             $map["timestamp"]));
         $totals["overall"] += $map["game_count"];
         $map["cutoffs"] = array();
         if ($cutoff_results) {
-            while ($cutoff_row = mysql_fetch_assoc($cutoff_results)) {
+            while ($cutoff_row = mysqli_fetch_assoc($cutoff_results)) {
                 $map["cutoffs"][] = $cutoff_row;
                 $name = $cutoff_row["cutoff"];
                 if (isset($totals[$name])) {

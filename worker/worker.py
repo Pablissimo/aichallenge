@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-from __future__ import print_function
 import sys
 import os
 import json
-import urllib
+import urllib.request
+import urllib.parse
 import logging.handlers
 import logging
 import pickle
@@ -59,7 +59,9 @@ from ants import Ants
 
 
 def uni_to_ascii(ustr):
-    return unicodedata.normalize('NFKD', ustr).encode('ascii','ignore')
+    if isinstance(ustr, bytes):
+        ustr = ustr.decode('utf-8', 'ignore')
+    return unicodedata.normalize('NFKD', ustr).encode('ascii','ignore').decode('ascii')
 
 class CD(object):
     def __init__(self, new_dir):
@@ -85,7 +87,7 @@ class GameAPIClient:
         try:
             url = self.get_url('api_get_task')
             log.debug(url)
-            data = urllib.urlopen(url).read()
+            data = urllib.request.urlopen(url).read().decode('utf-8')
             return json.loads(data)
         except ValueError as ex:
             log.error("Bad json from server during get task: %s" % data)
@@ -98,7 +100,7 @@ class GameAPIClient:
         try:
             url = self.get_url('api_get_submission_hash')
             url += '&submission_id=%s' % submission_id
-            data = json.loads(urllib.urlopen(url).read())
+            data = json.loads(urllib.request.urlopen(url).read().decode('utf-8'))
             return data['hash']
         except ValueError as ex:
             log.error("Bad json from server during get sumbission hash: %s" % data)
@@ -112,8 +114,8 @@ class GameAPIClient:
             url = self.get_url('api_get_submission')
             url += '&submission_id=%s' % submission_id
             log.debug(url)
-            remote_zip = urllib.urlopen(url)
-            filename = remote_zip.info().getheader('Content-disposition')
+            remote_zip = urllib.request.urlopen(url)
+            filename = remote_zip.info().get('Content-disposition')
             if filename == None:
                 log.error("File not returned by server: {0}".format(remote_zip.read()))
                 return None
@@ -133,7 +135,7 @@ class GameAPIClient:
         try:
             url = '%s/map/%s' % (self.base_url, map_filename)
             log.info("Downloading map %s" % url)
-            data = urllib.urlopen(url).read()
+            data = urllib.request.urlopen(url).read().decode('utf-8')
             log.debug(data)
             return data
         except Exception as ex:
@@ -166,12 +168,12 @@ class GameAPIClient:
                 else:
                     log.warning("Posting attempt %s" % (i+1))
                 json_data = json.dumps(result)
-                hash = md5(json_data).hexdigest()
+                hash = md5(json_data.encode('utf-8')).hexdigest()
                 if i == 0:
                     log.info("Posting hash: %s" % hash)
-                response = urllib.urlopen(url, json.dumps(result))
+                response = urllib.request.urlopen(url, json_data.encode('utf-8'))
                 if response.getcode() == 200:
-                    data = response.read()
+                    data = response.read().decode('utf-8')
                     try:
                         log.debug(data.strip())
                         data = json.loads(data)["hash"]
@@ -188,7 +190,7 @@ class GameAPIClient:
                             log.warning('Waiting %s seconds...' % wait_time)
                             time.sleep(wait_time)
                 else:
-                    log.warning("Server did not receive post: %s, %s" % (response.getcode(), response.read()))
+                    log.warning("Server did not receive post: %s, %s" % (response.getcode(), response.read().decode('utf-8')))
                     time.sleep(wait_time)
             except IOError as e:
                 log.error(traceback.format_exc())
@@ -234,7 +236,7 @@ class Worker:
         else:
             download_dir = self.download_dir(submission_id)
             log.info("Downloading %s..." % submission_id)
-            os.chmod(download_dir, 0755)
+            os.chmod(download_dir, 0o755)
             filename = self.cloud.get_submission(submission_id, download_dir)
             if filename != None:
                 remote_hash = self.cloud.get_submission_hash(submission_id)
@@ -297,7 +299,7 @@ class Worker:
                                 shutil.rmtree('bot')
                                 os.rename('tmp', 'bot')
                         for dirpath, _, filenames in os.walk("."):
-                            os.chmod(dirpath, 0755)
+                            os.chmod(dirpath, 0o755)
                             for filename in filenames:
                                 filename = os.path.join(dirpath, filename)
                                 os.chmod(filename,stat.S_IMODE(os.stat(filename).st_mode) | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
@@ -461,7 +463,7 @@ class Worker:
         result = run_game(game, bots, options)
         if 'status' in result:
             if result['status'][1] in ('crashed', 'timeout', 'invalid'):
-                if type(result['errors'][1]) == unicode:
+                if isinstance(result['errors'][1], str):
                     errors_str = uni_to_ascii(result['errors'][1])
                 else:
                     errors_str = '["'+ '","'.join(uni_to_ascii(e) for e in
@@ -471,7 +473,7 @@ class Worker:
                 return msg
             log.info(result['status'][0]) # player 0 is the bot we are testing
             if result['status'][0] in ('crashed', 'timeout', 'invalid'):
-                if type(result['errors'][1]) == unicode:
+                if isinstance(result['errors'][0], str):
                     errors_str = uni_to_ascii(result['errors'][0])
                 else:
                     errors_str = '["'+ '","'.join(uni_to_ascii(e) for e in
@@ -545,7 +547,7 @@ class Worker:
                       "error": traceback.format_exc() }
             success = self.cloud.post_result('api_game_result', result)
             # cleanup download dirs
-            map(self.clean_download, map(int, task['submissions']))
+            list(map(self.clean_download, map(int, task['submissions'])))
             return success
 
     def task(self, last=False):
@@ -649,11 +651,19 @@ def main(argv):
         if opts.num_tasks <= 0:
             try:
                 script_loc = os.path.realpath(os.path.dirname(__file__))
+                consecutive_failures = 0
                 while True:
                     log.info("Getting task infinity + 1")
                     if not worker.task():
-                        log.warning("Task failed, stopping worker")
-                        break
+                        consecutive_failures += 1
+                        if consecutive_failures > 10:
+                            log.warning("Too many consecutive failures, stopping worker")
+                            break
+                        retry_delay = min(consecutive_failures * 5, 30)
+                        log.warning("Task failed, retrying in %d seconds (%d consecutive failures)" % (retry_delay, consecutive_failures))
+                        time.sleep(retry_delay)
+                        continue
+                    consecutive_failures = 0
                     print()
                     if os.path.exists(os.path.join(script_loc, "stop_worker")):
                         log.info("Found worker stop file, exiting.")

@@ -51,7 +51,6 @@ import time
 from optparse import OptionParser
 
 from sandbox import get_sandbox
-from string import split
 
 try:
     from server_info import server_info
@@ -95,7 +94,7 @@ def nukeglob(pattern):
         # Ought to be all files, not folders
         try:
             os.unlink(path)
-        except OSError, e:
+        except OSError as e:
             if e.errno != errno.ENOENT:
                 raise
 
@@ -148,8 +147,8 @@ class ChmodCompiler(Compiler):
         with CD(bot_dir):
             for f in safeglob_multi(globs):
                 try:
-                    os.chmod(f, 0644)
-                except Exception, e:
+                    os.chmod(f, 0o644)
+                except Exception as e:
                     errors.append("Error chmoding %s - %s\n" % (f, e))
         return True
 
@@ -550,7 +549,7 @@ def compile_function(language, bot_dir, timelimit):
         try:
             if not compiler.compile(bot_dir, globs, errors, stop_time):
                 return False, errors
-        except StandardError, exc:
+        except Exception as exc:
             raise
             errors.append("Compiler %s failed with: %s"
                     % (compiler, exc))
@@ -653,9 +652,9 @@ def main(argv=sys.argv):
         parser.error("Extra arguments found, use --help for usage")
     if options.json:
         import json
-        print json.dumps([detected_lang, errors])
+        print(json.dumps([detected_lang, errors]))
     else:
-        print "Detected language:", detected_lang
+        print("Detected language:", detected_lang)
         if errors != None and len(errors) != 0:
             for error in errors:
                 print(error)

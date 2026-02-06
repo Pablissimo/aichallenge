@@ -109,7 +109,7 @@ function create_ranking_json($page=0, $org_id=NULL, $country_id=NULL, $language_
     // get count of rows and pages
     $results = contest_query("select_rankings_page_count", $where);
     if ($results) {
-        while ($row = mysql_fetch_array($results, MYSQL_NUM)) {
+        while ($row = mysqli_fetch_array($results, MYSQLI_NUM)) {
             $row_count = $row[0];
             $page_count = ceil($row_count / $page_size);
         }
@@ -118,7 +118,7 @@ function create_ranking_json($page=0, $org_id=NULL, $country_id=NULL, $language_
     }
     // get results
     $results = contest_query("select_rankings", $where, $limit);
-        
+
     $json = array("type" => $rank_type,
                   "page" => $page,
                   "page_count" => $page_count);
@@ -129,19 +129,20 @@ function create_ranking_json($page=0, $org_id=NULL, $country_id=NULL, $language_
     if (!$results) {
         return json_encode($json);
     } else {
-        $field_count = mysql_num_fields($results);
-        $row_count = mysql_num_rows($results);
+        $field_count = mysqli_num_fields($results);
+        $row_count = mysqli_num_rows($results);
         $field_names = array();
         for ($i = 0; $i < $field_count; $i++) {
-            $field_names[] = mysql_field_name($results, $i);
+            $field_info = mysqli_fetch_field_direct($results, $i);
+            $field_names[] = $field_info->name;
         }
         if ($filtered) {
             $field_names[] = "filter_rank";
             $filter_rank = $page_size * ($page - 1);
         } else {
             $filter_rank = NULL;
-        }   
-        while ($rank_row = mysql_fetch_array($results, MYSQL_NUM)) {
+        }
+        while ($rank_row = mysqli_fetch_array($results, MYSQLI_NUM)) {
             if ($filtered) {
                 if ($row["rank"]) {
                     $filter_rank += 1;
@@ -197,7 +198,7 @@ function create_ranking_table($page=0, $org_id=NULL, $country_id=NULL, $language
     // get count of rows and pages
     $results = contest_query("select_rankings_page_count", $where);
     if ($results) {
-        while ($row = mysql_fetch_array($results, MYSQL_NUM)) {
+        while ($row = mysqli_fetch_array($results, MYSQLI_NUM)) {
             $row_count = $row[0];
             $page_count = ceil($row_count / $page_size);
         }
@@ -235,7 +236,7 @@ function create_ranking_table($page=0, $org_id=NULL, $country_id=NULL, $language
     } else {
         $filter_rank = NULL;
     }   
-    while ($row = mysql_fetch_assoc($results)) {
+    while ($row = mysqli_fetch_assoc($results)) {
         $oddity = $oddity == 'odd' ? 'even' : 'odd';  // quite odd?
         $user_class = current_username() == $row["username"] ? ' user' : '';
         $rank_class = $row["rank"] ? '' : ' old';

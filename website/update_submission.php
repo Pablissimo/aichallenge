@@ -11,9 +11,10 @@ if (!array_key_exists('update_key', $_POST)) {
 
 $user_id = current_user_id();
 
+global $mysqli;
 $query = "SELECT email, activation_code FROM user WHERE user_id = ".$user_id;
-$result = mysql_query($query);
-if ($row = mysql_fetch_assoc($result)) {
+$result = mysqli_query($mysqli, $query);
+if ($row = mysqli_fetch_assoc($result)) {
   $sid = session_id();
   $update_key = $_POST['update_key'];
   $local_key = sha1($sid . $row['activation_code'] . $row['email']);

@@ -4,9 +4,10 @@ $title="Server Statistics";
 include 'header.php';
 require_once('mysql_login.php');
 
+global $mysqli;
 $query = "select count(*) from user where activated=1";
-$result = mysql_query($query);
-$row = mysql_fetch_row($result);
+$result = mysqli_query($mysqli, $query);
+$row = mysqli_fetch_row($result);
 $num_users = $row[0];
 
 $uptime = shell_exec('uptime');
@@ -15,23 +16,23 @@ $uptime = explode(', ', $uptime[1]);
 $uptime = $uptime[0].', '.$uptime[1];
 
 $query = "select count(*) from game;";
-$result = mysql_query($query);
-$row = mysql_fetch_row($result);
+$result = mysqli_query($mysqli, $query);
+$row = mysqli_fetch_row($result);
 $num_games = $row[0];
 
 $query = "select count(*) from user where activated=1 and created > (now() - interval 24 hour)";
-$result = mysql_query($query);
-$row = mysql_fetch_row($result);
+$result = mysqli_query($mysqli, $query);
+$row = mysqli_fetch_row($result);
 $new_users = $row[0];
 
 $query = "select count(*) from submission where timestamp > (now() - interval 24 hour)";
-$result = mysql_query($query);
-$row = mysql_fetch_row($result);
+$result = mysqli_query($mysqli, $query);
+$row = mysqli_fetch_row($result);
 $submissions = $row[0];
 
 $query = "select count(*) from submission where timestamp > (now() - interval 24 hour) and status in (40, 100)";
-$result = mysql_query($query);
-$row = mysql_fetch_row($result);
+$result = mysqli_query($mysqli, $query);
+$row = mysqli_fetch_row($result);
 $submissions_successful = $row[0];
 if ($submissions) {
     $submissions_percentage = ($submissions_successful / $submissions) * 100.0;
@@ -40,14 +41,14 @@ if ($submissions) {
 }
 
 $query = "select count(*) from game where timestamp > (now() - interval 24 hour)";
-$result = mysql_query($query);
-$row = mysql_fetch_row($result);
+$result = mysqli_query($mysqli, $query);
+$row = mysqli_fetch_row($result);
 $games_played = $row[0];
 
 $games_per_minute = array();
 foreach(array(5,60,1444) as $minutes){
     $sql = "select count(*)/$minutes from game where timestamp > timestampadd(minute, -$minutes, current_timestamp);";
-    $r = mysql_fetch_row(mysql_query($sql));
+    $r = mysqli_fetch_row(mysqli_query($mysqli, $sql));
     $games_per_minute[$minutes] = $r[0];
 }
 
@@ -83,17 +84,17 @@ $sql = "select game.worker_id,
             on game.game_id = pc.game_id
         where timestamp > timestampadd(minute, -30, current_timestamp)
         group by game.worker_id";
-$q = mysql_query($sql);
+$q = mysqli_query($mysqli, $sql);
 if ($q) {
-    while ($r = mysql_fetch_assoc($q)) {
+    while ($r = mysqli_fetch_assoc($q)) {
         $games_per_server[] = $r;
     }
 }
 
 $pair_cutoff = "None";
-$q = mysql_query("select number from settings where name = 'pairing_cutoff'");
+$q = mysqli_query($mysqli, "select number from settings where name = 'pairing_cutoff'");
 if ($q) {
-    $r = mysql_fetch_assoc($q);
+    $r = mysqli_fetch_assoc($q);
     if ($r) {
         $pair_cutoff = $r["number"];
     }

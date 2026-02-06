@@ -109,7 +109,7 @@ function get_query_results($page=0, $user_id=NULL, $submission_id=NULL, $map_id=
     }
     $list_results = contest_query($page_count_query, $list_select_field, $list_id);
     if ($list_results) {
-        while ($list_row = mysql_fetch_array($list_results, MYSQL_NUM)) {
+        while ($list_row = mysqli_fetch_array($list_results, MYSQLI_NUM)) {
             $row_count = $list_row[0];
             $page_count = ceil($row_count / $page_size);
         }
@@ -131,7 +131,7 @@ function get_query_results($page=0, $user_id=NULL, $submission_id=NULL, $map_id=
         $rows = array();
         $last_game_id = -1;
         $cur_row = NULL;
-        while ($row = mysql_fetch_assoc($results)) {
+        while ($row = mysqli_fetch_assoc($results)) {
             // get list type name
             if ($list_type && !$list_name && $row[$list_select_field] == $list_id) {
                 $list_name = $row[$list_id_field];                

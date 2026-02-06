@@ -5,7 +5,7 @@ if (extension_loaded ('memcache')) {
 	try {
 		$memcache = new Memcache;
 		try {
-			$memcache->connect('localhost', 11211);
+			$memcache->connect(getenv('MEMCACHED_HOST') ?: 'localhost', getenv('MEMCACHED_PORT') ?: 11211);
 			if (!$memcache->set('test', 'success')) {
 				error_log("Connected to memcache, but can't write.");
 				$memcache->close();

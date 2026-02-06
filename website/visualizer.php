@@ -21,7 +21,7 @@ if ($game_id !== FALSE and $game_id !== NULL) {
 	                                     $game_id,
 	                                     $user_id);
     	}
-        while ($row = mysql_fetch_assoc($game_errors)) {
+        while ($row = mysqli_fetch_assoc($game_errors)) {
             $error_msg = "<ul>";
             $username = $row["username"];
             $status = $row["status"];

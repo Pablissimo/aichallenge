@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-from __future__ import print_function
-
 import argparse
 import logging
 import logging.handlers
@@ -11,7 +9,8 @@ import time
 import traceback
 from subprocess import Popen, PIPE
 
-import MySQLdb
+import pymysql
+import pymysql.cursors
 from server_info import server_info
 from sql import sql
 
@@ -55,16 +54,16 @@ connection = None
 def get_connection():
     global connection
     if connection == None:
-        connection = MySQLdb.connect(host = server_info["db_host"],
+        connection = pymysql.connect(host = server_info["db_host"],
                                      user = server_info["db_username"],
-                                     passwd = server_info["db_password"],
-                                     db = server_info["db_name"])
+                                     password = server_info["db_password"],
+                                     database = server_info["db_name"])
     return connection
 
 def update_trueskill(game_id):
     log.info("Updating TrueSkill for game {0}".format(game_id))
     conn = get_connection()
-    cursor = conn.cursor(MySQLdb.cursors.DictCursor)
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
 
     # get list of players and their mu/sigma values from the database
     players = []
@@ -87,22 +86,22 @@ def update_trueskill(game_id):
     tsupdater = Popen(["java", "-Xmx100m", "-cp", classpath, "TSUpdate"],
             stdin=PIPE, stdout=PIPE)
     for player in players:
-        tsupdater.stdin.write("P %s %d %f %f\n" % (player.name, player.rank,
-            player.skill[0], player.skill[1]))
-    tsupdater.stdin.write("C\n")
+        tsupdater.stdin.write(("P %s %d %f %f\n" % (player.name, player.rank,
+            player.skill[0], player.skill[1])).encode())
+    tsupdater.stdin.write(b"C\n")
     tsupdater.stdin.flush()
     tsupdater.wait()
     for player in players:
         # this might seem like a fragile way to handle the output of TSUpdate
         # but it is meant as a double check that we are getting good and
         # complete data back
-        result = tsupdater.stdout.readline().split()
+        result = tsupdater.stdout.readline().decode().split()
         if str(player.name) != result[0]:
             log.error("Unexpected player name in TSUpdate result. %s != %s"
                     % (player.name, result[0]))
             return False
         player.skill = (float(result[1]), float(result[2]))
-    if tsupdater.stdout.read() != "":
+    if tsupdater.stdout.read().decode().strip() != "":
         log.error("Received extra data back from TSUpdate")
         return False
 
@@ -120,7 +119,7 @@ def update_trueskill(game_id):
 
 def update_leaderboard(wait_time):
     conn = get_connection()
-    cursor = conn.cursor(MySQLdb.cursors.DictCursor)
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
     while True:
         try:
             if use_log:
@@ -143,7 +142,7 @@ def update_leaderboard(wait_time):
 def reset_submissions(status):
     log.info("Resetting all latest submissions to status {0}".format(status))
     conn = get_connection()
-    cursor = conn.cursor(MySQLdb.cursors.DictCursor)
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
     cursor.execute('update submission set status = 20 where latest = 1')
     conn.commit()
 

@@ -53,8 +53,8 @@ if($server_info["submissions_open"]) {
     if (has_recent_submission()) {
         echo "<p>Sorry, you have to wait at least 10 minutes between submissions. This wait is waived if your current submission fails to successfully enter the contest.</p>";
     } else {
-        $result = mysql_query("SELECT * FROM user WHERE user_id = ".current_user_id());
-        if (!$row = mysql_fetch_assoc($result)) {
+        $result = mysqli_query($mysqli, "SELECT * FROM user WHERE user_id = ".current_user_id());
+        if (!$row = mysqli_fetch_assoc($result)) {
             die("Could not get user data from database.");
         }
         $sid = session_id();

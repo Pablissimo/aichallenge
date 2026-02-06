@@ -4,12 +4,13 @@ ini_set('display_errors', true);
 
 require_once('mysql_login.php');
 
+global $mysqli;
 if (isset($argv[1])) {
-	$username = mysql_real_escape_string(stripslashes($argv[1]));
+	$username = mysqli_real_escape_string($mysqli, stripslashes($argv[1]));
 	echo "Enter new password: ";
-	$password1 = mysql_real_escape_string(stripslashes(str_replace(array("\r","\n"), "", fgets(STDIN))));
+	$password1 = mysqli_real_escape_string($mysqli, stripslashes(str_replace(array("\r","\n"), "", fgets(STDIN))));
 	echo "Retype new password: ";
-	$password2 = mysql_real_escape_string(stripslashes(str_replace(array("\r","\n"), "", fgets(STDIN))));
+	$password2 = mysqli_real_escape_string($mysqli, stripslashes(str_replace(array("\r","\n"), "", fgets(STDIN))));
 	
 	if ($password1 == $password2) {
 		$passhash = crypt($password1, '$6$rounds=54321$' . salt() . '$');
@@ -17,7 +18,7 @@ if (isset($argv[1])) {
 		$sql = "update user
 		        set password = '" . $passhash ."'
 		        where username = '" . $username . "'";
-		if (mysql_query($sql)) {
+		if (mysqli_query($mysqli, $sql)) {
 			echo "Password has been changed\n";
 			if (check_credentials($username, $password1)) {
 				echo "Password verified.\n";

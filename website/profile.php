@@ -26,7 +26,7 @@ $rank = NULL;
 $skill = NULL;
 $userresult = contest_query("select_profile_user", $user_id);
 if ($userresult) {
-    $userdata = mysql_fetch_assoc($userresult);
+    $userdata = mysqli_fetch_assoc($userresult);
     if ($userdata['rank']) {
         $rank = nice_rank($userdata["rank"],
                           $userdata["rank_change"]);
@@ -127,8 +127,8 @@ echo <<<EOT
       <select name="user_country" style="width:210px;">
 EOT;
   $query = "SELECT * FROM country ORDER BY country_id";
-  $result = mysql_query($query);
-  while ($row = mysql_fetch_assoc($result)) {
+  $result = mysqli_query($mysqli, $query);
+  while ($row = mysqli_fetch_assoc($result)) {
     $option_id = $row['country_id'];
     $option_name = $row['name'];
     if ($option_id == $country_id) {
@@ -161,8 +161,8 @@ echo <<<EOT
       <option value="999">---</option>
 EOT;
   $query = "SELECT * FROM organization WHERE org_id > 1 ORDER BY name";
-  $result = mysql_query($query);
-  while ($row = mysql_fetch_assoc($result)) {
+  $result = mysqli_query($mysqli, $query);
+  while ($row = mysqli_fetch_assoc($result)) {
     $option_id = $row['org_id'];
     $option_name = $row['name'];
     if ($option_id == $org_id) {
@@ -227,7 +227,7 @@ echo "</div>";
         $cutoff = false;
         $pc_result = contest_query("select_pairing_cutoff");
         if ($pc_result) {
-            $pc_row = mysql_fetch_assoc($pc_result);
+            $pc_row = mysqli_fetch_assoc($pc_result);
             if ($userdata["rank"] >= $pc_row["pairing_cutoff"]) {
                 echo "<p>Sorry you are outside of the pairing cutoff, you're unlikely to play in anymore games</p>";
                 $cutoff = true;
@@ -236,12 +236,12 @@ echo "</div>";
 
         if (!$cutoff) {
             $in_game_result = contest_query("select_in_game", $user_id);
-            if ($in_game_result and mysql_num_rows($in_game_result) > 0) {
+            if ($in_game_result and mysqli_num_rows($in_game_result) > 0) {
                 echo "<p><strong>In Game:</strong> Playing in a game right now.</p>";
             } else {    
                 $next_game_result = contest_query("select_next_game_in", $user_id);
                 if ($next_game_result) {
-                    while ($next_game_row = mysql_fetch_assoc($next_game_result)) {
+                    while ($next_game_row = mysqli_fetch_assoc($next_game_result)) {
                         echo "<p><strong>Next Game:</strong> ".$next_game_row["players_ahead"]." players are ahead.<br />";
                         echo "The current player rate is about ".$next_game_row["players_per_minute"]." players per minute.<br />";
                         echo "The current game rate is about ".$next_game_row["games_per_minute"]." games per minute.<br />";
@@ -276,7 +276,7 @@ echo "</div>";
             && logged_in_with_valid_credentials()
             && (logged_in_as_admin() || current_user_id() == $user_id)) {
         $status_result = contest_query("select_submission_status", $user_id);
-        if ($status_row = mysql_fetch_assoc($status_result)) {
+        if ($status_row = mysqli_fetch_assoc($status_result)) {
             if ($status_row['status'] == 100 || $status_row['status'] == 40) {
                 echo "<div class=\"activate\">";
                 echo "<form method=\"post\" action=\"update_submission.php\">";

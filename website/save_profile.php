@@ -4,24 +4,26 @@ require_once('mysql_login.php');
 require_once('bad_words.php');
 
 function check_valid_organization($id) {
+  global $mysqli;
   if ($id == 999 || filter_var($id, FILTER_VALIDATE_INT) === FALSE) {
     return False;
   }
   $query = "SELECT count(*) FROM organization where org_id=". $id;
-  $result = mysql_query($query);
-  $row = mysql_fetch_assoc($result);
+  $result = mysqli_query($mysqli, $query);
+  $row = mysqli_fetch_assoc($result);
   if ($row['count(*)'] > 0)
     return True;
   return False;
 }
 
 function check_valid_country($id) {
+  global $mysqli;
   if ($id == 999 || !filter_var($id, FILTER_VALIDATE_INT)) {
     return False;
   }
   $query = "SELECT count(*) from country where country_id=". $id;
-  $result = mysql_query($query);
-  $row = mysql_fetch_assoc($result);
+  $result = mysqli_query($mysqli, $query);
+  $row = mysqli_fetch_assoc($result);
   if ($row['count(*)'] > 0)
   return True;
   return False;
@@ -37,8 +39,8 @@ if (!array_key_exists('update_key', $_POST)) {
 $user_id = current_user_id();
 
 $query = "SELECT email, activation_code FROM user WHERE user_id = ".$user_id;
-$result = mysql_query($query);
-if ($row = mysql_fetch_assoc($result)) {
+$result = mysqli_query($mysqli, $query);
+if ($row = mysqli_fetch_assoc($result)) {
   $sid = session_id();
   $update_key = $_POST['update_key'];
   $local_key = sha1($sid . $row['activation_code'] . $row['email']);
@@ -55,7 +57,7 @@ if (array_key_exists('user_country', $_POST)) {
     die("Invalid country id: ". $country_id);
   $query = "UPDATE user SET country_id='". $country_id ."' WHERE user_id = '".
       $user_id ."';";
-  if (!mysql_query($query))
+  if (!mysqli_query($mysqli, $query))
     die("Sorry, database update failed.");
 }
 
@@ -65,16 +67,16 @@ if (array_key_exists('user_organization', $_POST)) {
     die("Invalid organization id: ". $code);
   $query = "UPDATE user SET org_id='". $code ."' WHERE user_id = '".
       $user_id ."';";
-  if (!mysql_query($query))
+  if (!mysqli_query($mysqli, $query))
     die("Sorry, database update failed.");
 }
 
 if (array_key_exists('user_bio', $_POST)) {
-  $bio = mysql_real_escape_string(stripslashes($_POST['user_bio']));
+  $bio = mysqli_real_escape_string($mysqli, stripslashes($_POST['user_bio']));
   if (contains_bad_word($bio)) {
     die("Your bio contains a bad word. Keep it professional.");
   }
-  mysql_query("UPDATE user SET bio='$bio' WHERE user_id = '$user_id'");
+  mysqli_query($mysqli, "UPDATE user SET bio='$bio' WHERE user_id = '$user_id'");
 }
 
 

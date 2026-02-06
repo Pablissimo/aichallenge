@@ -12,8 +12,10 @@ $db_password = $server_info["db_password"]; // Mysql password
 $db_name = $server_info["db_name"]; // Database name
 
 // Connect to server and select database.
-mysql_pconnect($db_host, $db_username, $db_password) or die('cannot connect: ' . print_r(error_get_last()));
-mysql_select_db("$db_name")or die("cannot select DB");
+$mysqli = mysqli_connect($db_host, $db_username, $db_password, $db_name);
+if (!$mysqli) {
+    die('cannot connect: ' . mysqli_connect_error());
+}
 
 // salty function, used for passwords in crypt with SHA
 function salt($len=16, $cookie=FALSE) {
@@ -42,35 +44,39 @@ if (!function_exists("api_log")) {
 }
 
 function contest_query() {
-    global $contest_sql;
+    global $contest_sql, $mysqli;
     $args = func_get_args();
     if (count($args) >= 1) {
         $query_name = $args[0];
         if (count($args) > 1) {
-            $query_args = array_map('mysql_real_escape_string',
-                                    array_slice($args, 1));
+            $query_args = array_map(function($val) {
+                global $mysqli;
+                return mysqli_real_escape_string($mysqli, $val);
+            }, array_slice($args, 1));
             $query = vsprintf($contest_sql[$query_name], $query_args);
         } else {
             $query = $contest_sql[$query_name];
         }
-        $result = mysql_query($query);
+        $result = mysqli_query($mysqli, $query);
         if (!$result) {
-            api_log("Contest Query Error: ".$query."\n".mysql_error());
+            api_log("Contest Query Error: ".$query."\n".mysqli_error($mysqli));
         }
         return $result;
     }
 }
 
 function check_credentials($username, $password) {
-  $query = "
+    global $mysqli;
+    $username = mysqli_real_escape_string($mysqli, $username);
+    $query = "
         SELECT *
         FROM user u
         WHERE
             username='$username' AND
             activated = 1
     ";
-  $result = mysql_query($query);
-    if( $user = mysql_fetch_assoc( $result ) ) {
+    $result = mysqli_query($mysqli, $query);
+    if( $user = mysqli_fetch_assoc( $result ) ) {
         if (crypt($password, $user['password']) == $user['password']) {
             $_SESSION['username']   = $user['username'];
             $_SESSION['admin']      = $user['admin'];
@@ -88,10 +94,10 @@ function check_credentials_forgot($user_id, $forgot_code) {
     // $login_cookie is not encrypted nor stored in the database
     // $user_cookie['cookie'] is encrypted
     $user_forgets = contest_query("select_user_forgot_code", $user_id);
-    while ($user = mysql_fetch_assoc($user_forgets)) {
+    while ($user = mysqli_fetch_assoc($user_forgets)) {
         if (crypt($forgot_code, $user['cookie']) == $user['cookie']) {
             // found valid cookie, reset expire date
-            contest_query("delete_user_cookie", $user_id, $user['cookie']);     
+            contest_query("delete_user_cookie", $user_id, $user['cookie']);
             // update session vars
             $_SESSION['username']   = $user['username'];
             $_SESSION['admin']      = $user['admin'];
@@ -112,11 +118,11 @@ function check_credentials_cookie($user_id, $login_cookie) {
     // $login_cookie is not encrypted nor stored in the database
     // $user_cookie['cookie'] is encrypted
     $user_cookies = contest_query("select_user_cookies", $user_id);
-    while ($user = mysql_fetch_assoc($user_cookies)) {
+    while ($user = mysqli_fetch_assoc($user_cookies)) {
         if (crypt($login_cookie, $user['cookie']) == $user['cookie']) {
             // found valid cookie, reset expire date
             contest_query("update_user_cookie", $user_id, $user['cookie']);
-            setcookie('uid', $login_cookie, time()+60*60*24*5);        
+            setcookie('uid', $login_cookie, time()+60*60*24*5);
             // update session vars
             $_SESSION['username']   = $user['username'];
             $_SESSION['admin']      = $user['admin'];
@@ -157,7 +163,7 @@ function delete_user_cookie() {
 function create_user_forgot_code ($username) {
     $user_result = contest_query("select_user_by_name", $username);
     if ($user_result) {
-        $user_row = mysql_fetch_assoc($user_result);
+        $user_row = mysqli_fetch_assoc($user_result);
         $user_id = $user_row['user_id'];
         $username = $user_row['username'];
         $user_email = $user_row['email'];

@@ -46,7 +46,7 @@ $table .= <<<EOT
 EOT;
     $old_score = 999999;
     $old_rank = -1;
-    for ($i = 1; $row = mysql_fetch_assoc($rankings_results); $i += 1) {
+    for ($i = 1; $row = mysqli_fetch_assoc($rankings_results); $i += 1) {
         $username = htmlentities($row["username"], ENT_COMPAT, 'UTF-8');
         $programming_language = $row["programming_language"];
 	$score = $row["skill"];
