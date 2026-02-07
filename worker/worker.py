@@ -16,6 +16,7 @@ import unicodedata
 import traceback
 import tempfile
 from copy import copy, deepcopy
+from datetime import datetime, timezone
 
 from optparse import OptionParser
 
@@ -211,6 +212,67 @@ class Worker:
     def submission_dir(self, submission_id):
         return os.path.join(server_info["compiled_path"], str(submission_id//1000), str(submission_id))
 
+    def write_manifest(self, submission_id, language):
+        """Write a build manifest after successful compilation.
+
+        The manifest caches the run command and language so that games
+        can skip recompilation entirely.
+        """
+        submission_dir = self.submission_dir(submission_id)
+        run_cmd = compiler.get_run_cmd(submission_dir)
+        manifest = {
+            "submission_id": submission_id,
+            "language": language,
+            "compiled_at": datetime.now(timezone.utc).isoformat(),
+            "run_command": run_cmd,
+        }
+        manifest_path = os.path.join(submission_dir, 'manifest.json')
+        with open(manifest_path, 'w') as f:
+            json.dump(manifest, f, indent=2)
+        log.info("Wrote manifest for submission %s: %s" % (submission_id, language))
+
+    def read_manifest(self, submission_id):
+        """Read a build manifest. Returns the dict or None if not found."""
+        manifest_path = os.path.join(self.submission_dir(submission_id), 'manifest.json')
+        if not os.path.exists(manifest_path):
+            return None
+        try:
+            with open(manifest_path, 'r') as f:
+                return json.load(f)
+        except (ValueError, IOError) as e:
+            log.warning("Failed to read manifest for %s: %s" % (submission_id, e))
+            return None
+
+    def ensure_compiled(self, submission_id):
+        """Ensure a submission is compiled, using cached manifest if available.
+
+        Returns (bot_dir, run_cmd, run_image) on success, or raises Exception
+        on failure.  run_image may be None (use default).
+        """
+        submission_dir = self.submission_dir(submission_id)
+        manifest = self.read_manifest(submission_id)
+        if manifest and manifest.get('run_command'):
+            bot_dir = os.path.join(submission_dir, 'bot')
+            if os.path.isdir(bot_dir):
+                log.info("Using cached build for submission %s (lang=%s)" %
+                         (submission_id, manifest.get('language', '?')))
+                return bot_dir, manifest['run_command'], manifest.get('run_image')
+
+        # No valid manifest — fall back to compile
+        log.info("No manifest for submission %s, compiling..." % submission_id)
+        if not self.compile(submission_id, report_status=(False, True), run_test=False):
+            raise Exception('bot', 'Cannot compile bot %s' % submission_id)
+
+        # After compile, try to read manifest (compile writes it on success)
+        manifest = self.read_manifest(submission_id)
+        if manifest and manifest.get('run_command'):
+            return (os.path.join(submission_dir, 'bot'),
+                    manifest['run_command'], manifest.get('run_image'))
+
+        # Final fallback: read run command from run.sh
+        run_cmd = compiler.get_run_cmd(submission_dir)
+        return os.path.join(submission_dir, 'bot'), run_cmd, None
+
     def download_dir(self, submission_id):
         if submission_id not in self.download_dirs:
             tmp_dir = tempfile.mkdtemp(dir=server_info["compiled_path"])
@@ -340,6 +402,10 @@ class Worker:
                 else:
                     errors = None
                 if errors == None:
+                    # Write manifest if missing (backfill for pre-manifest builds)
+                    if not self.read_manifest(submission_id):
+                        lang = compiler.get_run_lang(submission_dir)
+                        self.write_manifest(submission_id, lang or "Unknown")
                     if report(STATUS_RUNABLE, compiler.get_run_lang(submission_dir)):
                         return True
                     else:
@@ -396,6 +462,7 @@ class Worker:
                 if errors == None:
                     os.rename(download_dir, submission_dir)
                     del self.download_dirs[submission_id]
+                    self.write_manifest(submission_id, detected_lang)
                     if report(STATUS_RUNABLE, detected_lang):
                         return True
                     else:
@@ -509,21 +576,12 @@ class Worker:
             bots = []
             for submission_id in task["submissions"]:
                 submission_id = int(submission_id)
-                # sometimes the Go bots get marked good,
-                # then the Go language is updated and breaks syntax,
-                # then they need to be marked as invalid again
-                # so this will report status to turn off bots that fail
-                #   sometime after they already succeeded
-                if self.compile(submission_id, report_status=(False, True), run_test=False):
-                    submission_dir = self.submission_dir(submission_id)
-                    run_cmd = compiler.get_run_cmd(submission_dir)
-                    #run_dir = tempfile.mkdtemp(dir=server_info["compiled_path"])
-                    bot_dir = os.path.join(submission_dir, 'bot')
-                    bots.append((bot_dir, run_cmd))
-                    #shutil.copytree(submission_dir, run_dir)
-                else:
+                try:
+                    bot_dir, run_cmd, run_image = self.ensure_compiled(submission_id)
+                except Exception:
                     self.clean_download(submission_id)
-                    raise Exception('bot', 'Can not compile bot %s' % submission_id)
+                    raise
+                bots.append((bot_dir, run_cmd, run_image))
             options['game_id'] = matchup_id
             log.debug((game.__class__.__name__, task['submissions'], options, matchup_id))
             # set worker debug logging
