@@ -220,11 +220,13 @@ class Worker:
         """
         submission_dir = self.submission_dir(submission_id)
         run_cmd = compiler.get_run_cmd(submission_dir)
+        run_image = compiler.get_run_image(language)
         manifest = {
             "submission_id": submission_id,
             "language": language,
             "compiled_at": datetime.now(timezone.utc).isoformat(),
             "run_command": run_cmd,
+            "run_image": run_image,
         }
         manifest_path = os.path.join(submission_dir, 'manifest.json')
         with open(manifest_path, 'w') as f:
