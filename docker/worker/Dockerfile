@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages
-RUN pip install --no-cache-dir pymysql
+RUN pip install --no-cache-dir pymysql boto3
 
 # Create app directory structure
 RUN mkdir -p /opt/aichallenge/worker \

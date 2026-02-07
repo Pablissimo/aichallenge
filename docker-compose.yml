@@ -56,6 +56,23 @@ services:
       memcached:
         condition: service_started
 
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   worker:
     build:
       context: .
@@ -79,6 +96,12 @@ services:
       # Volume name mapping so DockerSandbox can mount the right volumes
       # into bot containers (format: mount_point=volume_name,...)
       DOCKER_VOLUME_MAP: "/var/aichallenge/compiled=aichallenge_compiled_data,/var/aichallenge/uploads=aichallenge_uploads_data,/var/aichallenge/maps=aichallenge_maps_data"
+      # Artifact store (MinIO/S3)
+      S3_ARTIFACT_STORE: "true"
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET: aichallenge
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - uploads_data:/var/aichallenge/uploads
@@ -91,6 +114,8 @@ services:
         condition: service_healthy
       website:
         condition: service_started
+      minio:
+        condition: service_healthy
 
 volumes:
   mysql_data:
@@ -99,3 +124,4 @@ volumes:
   compiled_data:
   replay_data:
   logs_data:
+  minio_data:

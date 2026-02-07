@@ -24,6 +24,7 @@ from server_info import server_info
 
 import compiler
 from engine import run_game
+from artifact_store import ArtifactStore
 
 # Set up logging
 log = logging.getLogger('worker')
@@ -208,6 +209,22 @@ class Worker:
         self.test_map = None
         self.download_dirs = {}
         self.debug = debug
+        # Initialize artifact store if configured
+        s3_enabled = os.environ.get('S3_ARTIFACT_STORE', 'false').lower() == 'true'
+        if s3_enabled:
+            try:
+                self.artifact_store = ArtifactStore(
+                    endpoint=os.environ.get('S3_ENDPOINT'),
+                    access_key=os.environ.get('S3_ACCESS_KEY'),
+                    secret_key=os.environ.get('S3_SECRET_KEY'),
+                    bucket=os.environ.get('S3_BUCKET', 'aichallenge'),
+                )
+                log.info("Artifact store enabled: %s" % os.environ.get('S3_ENDPOINT'))
+            except Exception as e:
+                log.warning("Failed to initialize artifact store: %s" % e)
+                self.artifact_store = None
+        else:
+            self.artifact_store = None
 
     def submission_dir(self, submission_id):
         return os.path.join(server_info["compiled_path"], str(submission_id//1000), str(submission_id))
@@ -259,6 +276,17 @@ class Worker:
                 log.info("Using cached build for submission %s (lang=%s)" %
                          (submission_id, manifest.get('language', '?')))
                 return bot_dir, manifest['run_command'], manifest.get('run_image')
+
+        # Try fetching from artifact store before recompiling
+        if self.artifact_store:
+            if not os.path.exists(submission_dir):
+                os.makedirs(os.path.split(submission_dir)[0], exist_ok=True)
+            if self.artifact_store.download(submission_id, submission_dir):
+                manifest = self.read_manifest(submission_id)
+                if manifest and manifest.get('run_command'):
+                    log.info("Fetched submission %s from artifact store" % submission_id)
+                    return (os.path.join(submission_dir, 'bot'),
+                            manifest['run_command'], manifest.get('run_image'))
 
         # No valid manifest — fall back to compile
         log.info("No manifest for submission %s, compiling..." % submission_id)
@@ -408,6 +436,8 @@ class Worker:
                     if not self.read_manifest(submission_id):
                         lang = compiler.get_run_lang(submission_dir)
                         self.write_manifest(submission_id, lang or "Unknown")
+                        if self.artifact_store:
+                            self.artifact_store.upload(submission_id, submission_dir)
                     if report(STATUS_RUNABLE, compiler.get_run_lang(submission_dir)):
                         return True
                     else:
@@ -465,6 +495,8 @@ class Worker:
                     os.rename(download_dir, submission_dir)
                     del self.download_dirs[submission_id]
                     self.write_manifest(submission_id, detected_lang)
+                    if self.artifact_store:
+                        self.artifact_store.upload(submission_id, submission_dir)
                     if report(STATUS_RUNABLE, detected_lang):
                         return True
                     else:
